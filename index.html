@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Eco-casino</title>
+
+<!-- Permite modo app -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#000000">
+
+<style>
+body {
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:Arial;
+  text-align:center;
+}
+
+h1 {
+  margin-top:20px;
+  text-shadow:0 0 15px gold;
+}
+
+#flecha {
+  font-size:40px;
+  color:gold;
+}
+
+canvas {
+  background:#111;
+  border:8px solid gold;
+  border-radius:50%;
+  margin-top:10px;
+}
+
+button {
+  margin-top:20px;
+  padding:12px 30px;
+  font-size:20px;
+  border:none;
+  border-radius:10px;
+  background:gold;
+  font-weight:bold;
+}
+
+#resultado {
+  margin-top:15px;
+  font-size:22px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Eco-casino</h1>
+<div id="flecha">⬇️</div>
+
+<canvas id="ruleta"></canvas>
+<br>
+<button onclick="girar()">GIRAR</button>
+
+<div id="resultado"></div>
+
+<script>
+const canvas = document.getElementById("ruleta");
+const ctx = canvas.getContext("2d");
+
+// 🔥 SOLUCIÓN iOS: tamaño fijo + DPR seguro
+function setupCanvas(){
+  const size = Math.min(window.innerWidth*0.9, 400);
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+
+  canvas.style.width = size + "px";
+  canvas.style.height = size + "px";
+
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  return size;
+}
+
+let size = setupCanvas();
+let c = size/2;
+let r = size*0.45;
+
+const total = 36;
+
+// valores
+let valores = [
+  ...Array(23).fill(1),
+  ...Array(10).fill(3),
+  ...Array(3).fill(2)
+];
+
+// shuffle
+for(let i=valores.length-1;i>0;i--){
+  let j=Math.floor(Math.random()*(i+1));
+  [valores[i],valores[j]]=[valores[j],valores[i]];
+}
+
+const coloresBase = [
+"#ffcc7f","#ff914d","#ff751f",
+"#bae4ff","#13b5d1","#00a1ff",
+"#f1d5b5","#ef6d6d","#ff3131"
+];
+
+const colores = Array.from({length:36},(_,i)=>coloresBase[i%9]);
+
+const ang = (Math.PI*2)/total;
+
+let inicio = 0;
+let girando = false;
+let ganador = -1;
+
+// 🎯 DIBUJO (con fix iOS: path cerrado)
+function dibujar(){
+  ctx.clearRect(0,0,size,size);
+
+  for(let i=0;i<total;i++){
+    let a1 = inicio + i*ang;
+    let a2 = a1 + ang;
+
+    ctx.beginPath();
+    ctx.moveTo(c,c);
+    ctx.arc(c,c,r,a1,a2);
+    ctx.closePath(); // 🔥 clave para iOS
+    ctx.fillStyle = (i===ganador)?"#fff":colores[i];
+    ctx.fill();
+  }
+
+  // números
+  for(let i=0;i<total;i++){
+    let a = inicio + i*ang + ang/2;
+
+    ctx.save();
+    ctx.translate(c,c);
+    ctx.rotate(a);
+    ctx.fillStyle="#000";
+    ctx.font="bold "+(size*0.06)+"px Arial";
+    ctx.textAlign="right";
+    ctx.fillText(valores[i], r-10,5);
+    ctx.restore();
+  }
+}
+
+dibujar();
+
+let v=0;
+
+function girar(){
+  if(girando) return;
+
+  girando=true;
+  ganador=-1;
+  document.getElementById("resultado").textContent="";
+
+  v = Math.random()*0.3 + 0.3;
+  animar();
+}
+
+function animar(){
+  inicio += v;
+  v *= 0.985;
+
+  dibujar();
+
+  if(v>0.002){
+    requestAnimationFrame(animar);
+  } else {
+    girando=false;
+    calcular();
+  }
+}
+
+function calcular(){
+  let anguloFlecha = -Math.PI/2;
+  let rel = (anguloFlecha - inicio)%(Math.PI*2);
+  if(rel<0) rel+=Math.PI*2;
+
+  let i = Math.floor(rel/ang);
+  ganador=i;
+
+  document.getElementById("resultado").textContent =
+    "Resultado: "+valores[i];
+
+  dibujar();
+}
+
+// resize seguro
+window.addEventListener("resize",()=>{
+  size = setupCanvas();
+  c = size/2;
+  r = size*0.45;
+  dibujar();
+});
+</script>
+
+</body>
+</html>
